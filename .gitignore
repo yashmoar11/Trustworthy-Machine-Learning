@@ -1,0 +1,12 @@
+# OS and Python junk
+.DS_Store
+__pycache__/
+*.pyc
+
+# The course starter repo's code, which our scripts run inside (see the README)
+eval/
+LLaMA-Factory/
+
+# Job logs and the slice list from make_eval_slices.py
+scripts/logs/
+scripts/eval_slices.txt

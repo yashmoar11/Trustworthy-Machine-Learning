@@ -1,0 +1,46 @@
+# Full fine-tuning of Qwen2.5-3B-Instruct, the same config for all five training sets so the only difference
+# between the models is the data. The training hyperparameters (batch, learning rate and schedule, epochs, length,
+# precision) are the ones in the sample config in the README of the course starter repo
+# (reds-lab/Project-Reasoning-SFT-LLM). We only changed how it runs: DeepSpeed stage, attention kernel, Liger kernels, preprocessing workers, logging and
+# saving, no wandb, and the model loads from a local copy.
+# train.sh fills in dataset, output_dir and tokenized_path for each run. Relative paths start from LLaMA-Factory/.
+
+### model
+model_name_or_path: ../eval/models/Qwen2.5-3B-Instruct
+enable_liger_kernel: true    # Liger's fused GPU kernels (the loss included) save a lot of GPU memory at 16K tokens
+
+### method
+stage: sft
+do_train: true
+finetuning_type: full
+# DeepSpeed ZeRO stage 2 on one GPU, everything kept on the GPU (the course's sample config uses ZeRO-3 with CPU
+# offload), and PyTorch's built-in attention (the sample uses fa2, which needs the flash-attn package, and we didn't
+# install it)
+deepspeed: examples/deepspeed/ds_z2_config.json
+flash_attn: sdpa
+
+### dataset
+dataset: random_baseline
+cutoff_len: 16384
+overwrite_cache: true
+preprocessing_num_workers: 8
+template: qwen
+
+### output
+output_dir: /scratch/CHANGE_ME
+logging_steps: 5
+save_steps: 300              # out of 5,625 steps, so a job that hits its 8 hour limit loses at most 300 steps
+save_total_limit: 2          # a checkpoint is about 47 GB with the optimizer state
+plot_loss: true
+overwrite_output_dir: false  # keep false so a resubmitted job resumes from its last checkpoint
+
+### train
+per_device_train_batch_size: 1
+gradient_accumulation_steps: 8
+learning_rate: 5.0e-6
+num_train_epochs: 3
+lr_scheduler_type: cosine
+warmup_ratio: 0.0
+bf16: true
+ddp_timeout: 180000000
+report_to: none
