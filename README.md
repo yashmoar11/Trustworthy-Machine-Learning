@@ -478,11 +478,6 @@ cd ../scripts && ~/envs/sft/bin/python plot_training_loss.py
 
 ## Notes on the eval set
 
-- The local `aime` set is AIME 2024. The course leaderboard averages over AIME 2025 (not in the course's eval files)
-  and leaves out MATH and AIME 2024, so our Avg is not the leaderboard's AVG.
 - All 198 GPQA questions in the course's file have "A" as the right answer, because the options aren't shuffled. We
   didn't use that anywhere. Each question has 4 options, so guessing a letter at random 8 times would get at least
   one right on about 90% of them, more than any model here scores. So GPQA's pass@8 tells us little.
-- Our base model's Minerva pass@8 is 0.482, while the course leaderboard lists 0.338 for the same model. On the other
-  seven benchmarks our base model is within one question of the leaderboard's numbers, so the leaderboard's eval seems
-  to grade Minerva differently.
