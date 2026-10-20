@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 
 REPO = Path(__file__).resolve().parent.parent
 MODELS = Path(os.environ.get("MODELS", Path.home() / "models"))
-RUNS = ["random_baseline", "filtered_random", "difficulty_weighted", "topic_balanced", "hardest"]
+RUNS = ["random_15k", "cleaned_random", "cleaned_difficulty_weighted", "cleaned_difficulty_topic_balanced", "cleaned_hardest_only"]
 
 
 def ema(values, alpha=0.05):

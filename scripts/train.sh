@@ -16,13 +16,13 @@
 # wrote and listed in LLaMA-Factory/data/dataset_info.json (README step 8). A run can take several Slurm jobs of up to
 # 8 hours each: when one hits its time limit, the next job on the same cluster resumes from the last checkpoint.
 # Submit from scripts/ (or use submit_training.sh, which queues a whole run on several GPU types), e.g.
-#   RUN=difficulty_weighted sbatch -M owl --job-name=sft_difficulty_weighted -p b200_normal_q --qos=owl_b200_normal_short train.sh
+#   RUN=cleaned_difficulty_weighted sbatch -M owl --job-name=sft_difficulty_weighted -p b200_normal_q --qos=owl_b200_normal_short train.sh
 # Copies of the same run can wait in several queues. Only one trains at a time (job_lock.sh): a copy that starts while
 # another is training exits right away, and one that starts after the previous job ended takes over.
 # Checkpoints go to this cluster's /scratch/$USER/saves/$RUN, so only jobs on the same cluster can resume from them.
 # The finished model is copied to $HOME/models/$RUN, which every ARC cluster can read.
 
-RUN=${RUN:?set RUN=<dataset name>, e.g. RUN=difficulty_weighted}
+RUN=${RUN:?set RUN=<dataset name>, e.g. RUN=cleaned_difficulty_weighted}
 SCRIPTS=${SLURM_SUBMIT_DIR:-$(cd "$(dirname "$0")" && pwd)}
 FINAL=$HOME/models/$RUN
 

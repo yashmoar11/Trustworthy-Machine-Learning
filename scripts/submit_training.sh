@@ -3,7 +3,7 @@
 # Owl. Run it on a LOGIN node, since only login nodes can submit to other clusters. For each partition below it queues
 # a chain of 8 hour train.sh jobs, each starting after the one before it ends. Only one copy trains at a time
 # (job_lock.sh), and later jobs on the same cluster resume from its checkpoints.
-#   bash submit_training.sh difficulty_weighted
+#   bash submit_training.sh cleaned_difficulty_weighted
 RUN=${1:?usage: submit_training.sh <dataset name>}
 cd "$(dirname "$0")" || exit 1
 mkdir -p logs

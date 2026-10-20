@@ -15,22 +15,25 @@ these benchmarks or that are bad examples to learn from: coding problems (the be
 solutions longer than the 16,384 token limit we train with, solutions that give up, final answers that disagree with
 the source dataset's reference answer, solutions that repeat the same text over and over, questions that overlap with
 the benchmarks, and repeated questions. We threw those out and built four training sets from the rest. We trained one
-model on each of them plus one on a random pick of all 100,000 rows, five models in total, all with the exact same
-training settings. Each model has the same name as its training set:
+model on each of them plus one on a random pick of all 100,000 rows, five models in total. Every model is
+Qwen2.5-3B-Instruct fully fine-tuned for 3 epochs on its 15,000 rows with the exact same settings, so the only
+difference between them is the data, and each model is named after its training set:
 
-- random_baseline: 15,000 rows picked at random from all 100,000. This is the baseline the assignment asks for.
-- filtered_random: 15,000 rows picked at random from the rows left after the cleaning.
-- difficulty_weighted: like filtered_random, but problems that the base model (Qwen2.5-3B-Instruct before any
-  fine-tuning) often gets wrong are more likely to be picked.
-- topic_balanced: like difficulty_weighted, but it also takes every multiple choice problem, spreads the rest evenly
-  over topics, and skips near duplicate questions.
-- hardest: the 15,000 cleaned problems the base model solved least often.
+- random_15k: 15,000 rows picked at random from all 100,000, math and code, nothing removed. This is the baseline
+  the assignment asks for.
+- cleaned_random: 15,000 rows picked at random from the cleaned pool (the math rows left after the cleaning).
+- cleaned_difficulty_weighted: 15,000 rows from the cleaned pool, picked at random but weighted so that problems the
+  base model (Qwen2.5-3B-Instruct before any fine-tuning) often got wrong in our test are picked more often. This is
+  our final model.
+- cleaned_difficulty_topic_balanced: the same weighting, plus every multiple choice problem, a spread over 300 topic
+  groups, and no near duplicate questions.
+- cleaned_hardest_only: the 15,000 problems in the cleaned pool that the base model solved least often in our test.
 
 "How we picked the data" below has the details.
 
-Our final model is **difficulty_weighted**. Averaged over the 8 benchmarks, its pass@8 (the share of questions where
-at least one of its 8 tries is right, see Results) is 0.582, compared with 0.535 for the base model and 0.548 for
-random_baseline. Its average pass@1 (how often a single answer is right) is 0.289, compared with 0.285 and 0.272.
+Our final model is **cleaned_difficulty_weighted**. Averaged over the 8 benchmarks, its pass@8 (the share of questions
+where at least one of its 8 tries is right, see Results) is 0.582, compared with 0.535 for the base model and 0.548
+for random_15k. Its average pass@1 (how often a single answer is right) is 0.289, compared with 0.285 and 0.272.
 
 ## Results
 
@@ -53,44 +56,45 @@ Minerva Math and OlympiadBench.
 | model | AIME 2024 (30) | AMC 2023 (40) | CN_MATH 2024 (30) | GPQA Diamond (198) | Kaoyan (199) | MATH-500 (500) | Minerva (272) | OlympiadBench (675) | Avg |
 |---|---|---|---|---|---|---|---|---|---|
 | base model, no fine-tuning | 0.233 | 0.700 | 0.267 | 0.737 | 0.518 | 0.846 | 0.482 | 0.496 | 0.535 |
-| random_baseline | 0.300 | 0.700 | 0.200 | 0.707 | 0.668 | 0.878 | 0.434 | 0.499 | 0.548 |
-| filtered_random | 0.200 | 0.675 | 0.367 | 0.717 | 0.693 | 0.880 | 0.430 | 0.554 | 0.565 |
-| **difficulty_weighted** (final) | 0.233 | 0.775 | 0.433 | 0.672 | 0.678 | 0.882 | 0.441 | 0.544 | **0.582** |
-| topic_balanced | 0.233 | 0.775 | 0.300 | 0.687 | 0.688 | 0.890 | 0.430 | 0.557 | 0.570 |
-| hardest | 0.233 | 0.600 | 0.367 | 0.682 | 0.663 | 0.882 | 0.471 | 0.554 | 0.556 |
+| random_15k | 0.300 | 0.700 | 0.200 | 0.707 | 0.668 | 0.878 | 0.434 | 0.499 | 0.548 |
+| cleaned_random | 0.200 | 0.675 | 0.367 | 0.717 | 0.693 | 0.880 | 0.430 | 0.554 | 0.565 |
+| **cleaned_difficulty_weighted** (final) | 0.233 | 0.775 | 0.433 | 0.672 | 0.678 | 0.882 | 0.441 | 0.544 | **0.582** |
+| cleaned_difficulty_topic_balanced | 0.233 | 0.775 | 0.300 | 0.687 | 0.688 | 0.890 | 0.430 | 0.557 | 0.570 |
+| cleaned_hardest_only | 0.233 | 0.600 | 0.367 | 0.682 | 0.663 | 0.882 | 0.471 | 0.554 | 0.556 |
 
 **pass@1**
 
 | model | AIME 2024 | AMC 2023 | CN_MATH 2024 | GPQA Diamond | Kaoyan | MATH-500 | Minerva | OlympiadBench | Avg |
 |---|---|---|---|---|---|---|---|---|---|
 | base model, no fine-tuning | 0.079 | 0.388 | 0.079 | 0.287 | 0.217 | 0.653 | 0.301 | 0.275 | 0.285 |
-| random_baseline | 0.083 | 0.356 | 0.075 | 0.203 | 0.296 | 0.642 | 0.248 | 0.273 | 0.272 |
-| filtered_random | 0.054 | 0.394 | 0.092 | 0.202 | 0.288 | 0.665 | 0.250 | 0.293 | 0.280 |
-| **difficulty_weighted** (final) | 0.075 | 0.397 | 0.113 | 0.210 | 0.313 | 0.656 | 0.250 | 0.297 | **0.289** |
-| topic_balanced | 0.088 | 0.384 | 0.067 | 0.190 | 0.305 | 0.653 | 0.243 | 0.308 | 0.280 |
-| hardest | 0.079 | 0.322 | 0.117 | 0.193 | 0.279 | 0.661 | 0.254 | 0.304 | 0.276 |
+| random_15k | 0.083 | 0.356 | 0.075 | 0.203 | 0.296 | 0.642 | 0.248 | 0.273 | 0.272 |
+| cleaned_random | 0.054 | 0.394 | 0.092 | 0.202 | 0.288 | 0.665 | 0.250 | 0.293 | 0.280 |
+| **cleaned_difficulty_weighted** (final) | 0.075 | 0.397 | 0.113 | 0.210 | 0.313 | 0.656 | 0.250 | 0.297 | **0.289** |
+| cleaned_difficulty_topic_balanced | 0.088 | 0.384 | 0.067 | 0.190 | 0.305 | 0.653 | 0.243 | 0.308 | 0.280 |
+| cleaned_hardest_only | 0.079 | 0.322 | 0.117 | 0.193 | 0.279 | 0.661 | 0.254 | 0.304 | 0.276 |
 
 What we learned from these numbers:
-- Just cleaning the data helps. filtered_random averages 0.565, compared with 0.548 for random_baseline. The gains are
+- Just cleaning the data helps. cleaned_random averages 0.565, compared with 0.548 for random_15k. The gains are
   on CN_MATH (0.367 compared with 0.200), OlympiadBench (0.554 compared with 0.499) and Kaoyan (0.693 compared with
   0.668), while AIME goes down (0.200 compared with 0.300).
-- Picking more of the problems the base model struggles with raises the average again. difficulty_weighted averages
-  0.582, with its biggest gains over filtered_random on AMC (0.775 compared with 0.675) and CN_MATH (0.433 compared
-  with 0.367).
+- Picking more of the problems the base model struggles with raises the average again. cleaned_difficulty_weighted
+  averages 0.582, with its biggest gains over cleaned_random on AMC (0.775 compared with 0.675) and CN_MATH (0.433
+  compared with 0.367).
 - The four cleaned sets are close, though, and the average leans on the small benchmarks. AIME and CN_MATH have only
   30 questions each, so one question moves their score by 0.033 and the average by about 0.004. Counting all 1,944
   questions together instead, the four cleaned sets each solve between 1,247 and 1,258 of them at least once in 8
-  tries, and difficulty_weighted is the lowest of the four. All four are clearly ahead of random_baseline (1,210) and
-  the base model (1,181) either way. We trained each set only once and picked the final model by the per-benchmark
+  tries, and cleaned_difficulty_weighted is the lowest of the four. All four are clearly ahead of random_15k (1,210)
+  and the base model (1,181) either way. We trained each set only once and picked the final model by the per-benchmark
   average, which is how the leaderboard ranks, so the gaps between the four cleaned sets may be noise.
-- topic_balanced (0.570) and hardest (0.556) average a bit lower than difficulty_weighted. For hardest our guess is
-  that it has too many problems that are too hard for a 3B model to learn from: up to 8,447 of its 15,000 rows are
-  problems the base model got wrong in all 4 of its tries, and the rest are long problems we never measured.
-- random_baseline's higher AIME score (9 of 30, where most other models got 7) comes from two questions where only 1
+- cleaned_difficulty_topic_balanced (0.570) and cleaned_hardest_only (0.556) average a bit lower than
+  cleaned_difficulty_weighted. For cleaned_hardest_only our guess is that it has too many problems that are too hard
+  for a 3B model to learn from: up to 8,447 of its 15,000 rows are problems the base model got wrong in all 4 of its
+  tries, and the rest are long problems we never measured.
+- random_15k's higher AIME score (9 of 30, where most other models got 7) comes from two questions where only 1
   of its 8 answers was right, so it's mostly luck.
-- pass@1 hardly changes (0.285 for the base model, 0.289 for difficulty_weighted). Counting all 1,944 questions
-  together, it's 0.367 for the base model and between 0.368 and 0.371 for the four cleaned sets. So fine-tuning mainly
-  gets more questions right at least once in 8 tries; a single answer isn't much more reliable.
+- pass@1 hardly changes (0.285 for the base model, 0.289 for cleaned_difficulty_weighted). Counting all 1,944
+  questions together, it's 0.367 for the base model and between 0.368 and 0.371 for the four cleaned sets. So
+  fine-tuning mainly gets more questions right at least once in 8 tries; a single answer isn't much more reliable.
 - Every fine-tuned model does worse than the base model on GPQA (0.737 down to between 0.672 and 0.717) and Minerva
   (0.482 down to between 0.430 and 0.471). We didn't look into why, but two things may be related. Our training sets
   are all or mostly math. And the fine-tuned models write much longer answers than the base model (that's why their
@@ -139,10 +143,10 @@ topic clusters, near duplicates) and `analysis_report.py` (joins those results a
 - 120 rows have a run of 50 characters in common with a benchmark question. Most of those are just common phrasing;
   only 20 contain at least half of a benchmark question. The cleaning below drops all of them anyway.
 
-### The filtered pool
+### The cleaned pool
 
-Script: `select_subsets.py`. The filtered pool is the set of math rows that pass all of the checks below, and every
-training set except random_baseline is drawn from it. We applied the checks in this order:
+Script: `select_subsets.py`. The cleaned pool is the set of math rows that pass all of the checks below, and every
+training set except random_15k is drawn from it. We applied the checks in this order:
 
 | check | math rows left |
 |---|---:|
@@ -181,15 +185,15 @@ the average solve rate goes from 0.69 for the shortest tenth to about 0.23 for t
 
 | name | how it's built |
 |---|---|
-| random_baseline | 15,000 rows drawn uniformly at random from all 100,000 (seed 42). The assignment's baseline. |
-| filtered_random | 15,000 rows drawn uniformly at random from the filtered pool. |
-| **difficulty_weighted** (final) | A weighted random draw (without replacement) from the filtered pool. The weight depends on the base model's solve rate: 1.25 for 0 of 4, 1.5 for 1 or 2 of 4, 0.75 for 3 of 4 and 0.25 for 4 of 4. An estimated solve rate is grouped the same way: under 0.125, 0.125 to 0.625, 0.625 to 0.875, and 0.875 or more. So the problems it solved 1 or 2 times out of 4 get the most weight, the ones it never solved a bit less, and a problem it gets wrong at least half the time has 5 to 6 times the weight of one it always solves. |
-| topic_balanced | Same weights, plus three things: all multiple choice problems go in first (GPQA is multiple choice), the rest is spread over 300 topic clusters (k-means on the question embeddings, each cluster's quota grows with the square root of its size), and a question is skipped if it's a near duplicate (cosine similarity 0.95 or more) of one already picked. |
-| hardest | The 15,000 problems with the lowest solve rate (longer solution first on ties), near duplicates skipped. This follows the idea of the LIMO paper ("LIMO: Less is More for Reasoning"), which fine-tunes on a small set of hard problems. Only 8,447 pool problems were measured at 0 of 4, so at least 6,553 of its rows are long problems we never measured, whose estimated solve rate is about 0.23. |
+| random_15k | 15,000 rows drawn uniformly at random from all 100,000 (seed 42). The assignment's baseline. |
+| cleaned_random | 15,000 rows drawn uniformly at random from the cleaned pool. |
+| **cleaned_difficulty_weighted** (final) | A weighted random draw (without replacement) from the cleaned pool. The weight depends on the base model's solve rate: 1.25 for 0 of 4, 1.5 for 1 or 2 of 4, 0.75 for 3 of 4 and 0.25 for 4 of 4. An estimated solve rate is grouped the same way: under 0.125, 0.125 to 0.625, 0.625 to 0.875, and 0.875 or more. So the problems it solved 1 or 2 times out of 4 get the most weight, the ones it never solved a bit less, and a problem it gets wrong at least half the time has 5 to 6 times the weight of one it always solves. |
+| cleaned_difficulty_topic_balanced | Same weights, plus three things: all multiple choice problems go in first (GPQA is multiple choice), the rest is spread over 300 topic clusters (k-means on the question embeddings, each cluster's quota grows with the square root of its size), and a question is skipped if it's a near duplicate (cosine similarity 0.95 or more) of one already picked. |
+| cleaned_hardest_only | The 15,000 problems with the lowest solve rate (longer solution first on ties), near duplicates skipped. This follows the idea of the LIMO paper ("LIMO: Less is More for Reasoning"), which fine-tunes on a small set of hard problems. Only 8,447 pool problems were measured at 0 of 4, so at least 6,553 of its rows are long problems we never measured, whose estimated solve rate is about 0.23. |
 
 What ended up in each set:
 
-| | random_baseline | filtered_random | difficulty_weighted | topic_balanced | hardest |
+| | random_15k | cleaned_random | cleaned_difficulty_weighted | cleaned_difficulty_topic_balanced | cleaned_hardest_only |
 |---|---:|---:|---:|---:|---:|
 | math rows | 68% | 100% | 100% | 100% | 100% |
 | mean tokens per example (counting at most 16,384) | 7,482 | 6,442 | 6,646 | 6,466 | 6,583 |
@@ -212,7 +216,7 @@ kernel, Liger kernels, preprocessing workers, logging and saving, no wandb, and 
 | batch | 8 sequences per optimizer step: 1 at a time on the GPU, with the gradients added up over 8 (gradient accumulation) |
 | learning rate | 5e-6, cosine schedule, no warmup |
 | optimizer | AdamW (beta1 0.9, beta2 0.999, eps 1e-8), no weight decay, gradient clipping at 1.0 (Transformers defaults, not set in our config) |
-| max sequence length | 16,384 tokens (only random_baseline has longer rows, and those get cut) |
+| max sequence length | 16,384 tokens (only random_15k has longer rows, and those get cut) |
 | precision | bf16 |
 | seed | 42 (the Transformers default) |
 | memory | DeepSpeed ZeRO-2 on one GPU (LLaMA-Factory's `ds_z2_config.json`), Liger kernels (fused GPU code that saves memory, the loss included), PyTorch's built-in attention (SDPA) |
@@ -240,11 +244,11 @@ answer.
      averages over questions, so combining the slices gives the same numbers as one full run.
      `merge_eval_slices.py` grades every answer again with the course grader before writing the score.
 
-AIME and CN_MATH for all five models, and AMC for three of them (random_baseline, topic_balanced and hardest), ran
-as one job each with the course's `eval_single.sh`, before we had the slices. Everything else ran as slices, 177 in
-total. Those one-job runs, and the base model's OlympiadBench run, had vLLM's CPU swap space raised from 4 to 48 GiB
-through a one line change in eval.py. That's a memory setting only, and the course's eval.py is otherwise untouched
-(the slices get the same setting from `vllm_fix/`).
+AIME and CN_MATH for all five models, and AMC for three of them (random_15k, cleaned_difficulty_topic_balanced and
+cleaned_hardest_only), ran as one job each with the course's `eval_single.sh`, before we had the slices. Everything
+else ran as slices, 177 in total. Those one-job runs, and the base model's OlympiadBench run, had vLLM's CPU swap
+space raised from 4 to 48 GiB through a one line change in eval.py. That's a memory setting only, and the course's
+eval.py is otherwise untouched (the slices get the same setting from `vllm_fix/`).
 
 There's one more difference from the course setup. Our eval env has antlr4-python3-runtime 4.9.3, while
 `eval/requirements.txt` pins 4.11.1. With 4.11.1, latex2sympy2 (which the grader uses to read LaTeX) failed to
@@ -258,7 +262,7 @@ the repo root), then do steps 8, 9 and 10:
 
 ```bash
 cd scripts
-for n in random_baseline filtered_random difficulty_weighted topic_balanced hardest; do
+for n in random_15k cleaned_random cleaned_difficulty_weighted cleaned_difficulty_topic_balanced cleaned_hardest_only; do
     ~/envs/sft/bin/python make_subset.py --name $n --rows ../subsets/${n}_rows.json
 done
 cd ..
@@ -352,16 +356,16 @@ cd ..
 
 ```bash
 cd scripts
-~/envs/sft/bin/python make_subset.py --name random_baseline --random 15000
+~/envs/sft/bin/python make_subset.py --name random_15k --random 15000
 ```
 
-This writes the training file `LLaMA-Factory/data/random_baseline.json` and the row list
-`subsets/random_baseline_rows.json`, and registers the dataset in `LLaMA-Factory/data/dataset_info.json`.
+This writes the training file `LLaMA-Factory/data/random_15k.json` and the row list
+`subsets/random_15k_rows.json`, and registers the dataset in `LLaMA-Factory/data/dataset_info.json`.
 
 ### 5. Analyze the data (`scripts/`, CPU jobs)
 
 The first three jobs don't depend on each other, so they can run at the same time. `analysis_report.py` needs all
-three, plus `subsets/random_baseline_rows.json` from step 4, and it writes `eval/train_data/merged.parquet`, which
+three, plus `subsets/random_15k_rows.json` from step 4, and it writes `eval/train_data/merged.parquet`, which
 `select_subsets.py` reads.
 
 ```bash
@@ -397,7 +401,7 @@ a CPU.
 
 ```bash
 ~/envs/select/bin/python select_subsets.py
-for n in filtered_random difficulty_weighted topic_balanced hardest; do
+for n in cleaned_random cleaned_difficulty_weighted cleaned_difficulty_topic_balanced cleaned_hardest_only; do
     ~/envs/sft/bin/python make_subset.py --name $n --rows ../subsets/${n}_rows.json
 done
 git status ../subsets   # no changes means you got exactly our rows
@@ -410,7 +414,7 @@ limit can behave differently on other machines. The lists in `subsets/` are the 
 ### 8. Train (`scripts/`, on a login node)
 
 ```bash
-for n in random_baseline filtered_random difficulty_weighted topic_balanced hardest; do bash submit_training.sh $n; done
+for n in random_15k cleaned_random cleaned_difficulty_weighted cleaned_difficulty_topic_balanced cleaned_hardest_only; do bash submit_training.sh $n; done
 ```
 
 This queues each run on several GPU types at once, each as a chain of 8 hour jobs. Only one copy of a run trains at a
@@ -420,8 +424,8 @@ checkpoints are on that cluster's `/scratch`, and every copy exits right away on
 also submit `train.sh` yourself, chaining the jobs so each one resumes:
 
 ```bash
-id=$(RUN=difficulty_weighted sbatch --parsable -M <cluster> -p <gpu partition> --qos=<qos> train.sh)
-RUN=difficulty_weighted sbatch -M <cluster> -p <gpu partition> --qos=<qos> --dependency=afterany:${id%%;*} train.sh
+id=$(RUN=cleaned_difficulty_weighted sbatch --parsable -M <cluster> -p <gpu partition> --qos=<qos> train.sh)
+RUN=cleaned_difficulty_weighted sbatch -M <cluster> -p <gpu partition> --qos=<qos> --dependency=afterany:${id%%;*} train.sh
 ```
 
 Checkpoints go to `/scratch/$USER/saves/<name>`, and the finished model is copied to `$HOME/models/<name>`.

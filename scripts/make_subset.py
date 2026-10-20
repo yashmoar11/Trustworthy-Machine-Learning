@@ -4,9 +4,9 @@ Row numbers are positions in the course's 100,000 row training dataset (acereaso
 files). Run from scripts/ with the sft env (README step 1).
 
 Random baseline (15,000 rows picked uniformly at random from all 100,000, seed 42):
-    $HOME/envs/sft/bin/python make_subset.py --name random_baseline --random 15000
+    $HOME/envs/sft/bin/python make_subset.py --name random_15k --random 15000
 From a row list written by select_subsets.py:
-    $HOME/envs/sft/bin/python make_subset.py --name difficulty_weighted --rows ../subsets/difficulty_weighted_rows.json
+    $HOME/envs/sft/bin/python make_subset.py --name cleaned_difficulty_weighted --rows ../subsets/cleaned_difficulty_weighted_rows.json
 
 Writes LLaMA-Factory/data/<name>.json (the training file), subsets/<name>_rows.json (the row numbers, enough to
 rebuild the subset) and registers <name> in LLaMA-Factory/data/dataset_info.json.
@@ -26,7 +26,7 @@ DEFAULT_SRC = REPO / "eval" / "train_data" / "acereason11_100k" / "data"
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--name", required=True, help="dataset name used in the training config, e.g. random_baseline")
+    parser.add_argument("--name", required=True, help="dataset name used in the training config, e.g. random_15k")
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--random", type=int, metavar="N", help="pick N rows uniformly at random")
     group.add_argument("--rows", type=Path, help="JSON file with a list of row numbers to keep")

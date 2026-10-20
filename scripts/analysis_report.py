@@ -2,7 +2,7 @@ r"""README step 5, part 4: join everything per row and print the tables we used 
 
 Reads features.parquet (analyze_data.py), linked.parquet (link_and_grade.py) and clusters.parquet (cluster_prompts.py)
 from eval/train_data/, plus the dataset's prompts, the benchmark questions in eval/data/ and
-subsets/random_baseline_rows.json (README step 4). Writes eval/train_data/merged.parquet, which select_subsets.py
+subsets/random_15k_rows.json (README step 4). Writes eval/train_data/merged.parquet, which select_subsets.py
 reads, so run this before it.
 
 Only reads small tables, so a login node is fine. Run from scripts/ with the select env (README step 1):
@@ -154,7 +154,7 @@ if __name__ == "__main__":
         print(f"  weakest match ({r.coverage:.0%} of a {r.bench} question): {prompts.instruction[r.row][:140]!r}")
 
     section("9. What the random 15K baseline actually contains")
-    rnd = df[df.row.isin(json.loads((REPO / "subsets" / "random_baseline_rows.json").read_text()))]
+    rnd = df[df.row.isin(json.loads((REPO / "subsets" / "random_15k_rows.json").read_text()))]
     rm = rnd[rnd.category == "math"]
     print(f"rows: {len(rnd):,} | code: {pct((rnd.category == 'code').mean())} | truncated: {pct(rnd.truncated.mean())} "
           f"| give-up ending: {pct(rnd.guess_end.mean())} | mean tokens (counting at most 16,384): {rnd.total_tok.clip(upper=16384).mean():.0f}")

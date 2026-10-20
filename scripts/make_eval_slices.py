@@ -12,7 +12,7 @@ Run from eval/:  python ../scripts/make_eval_slices.py
 import os
 
 HOME = os.path.expanduser("~")
-RUNS = ["random_baseline", "topic_balanced", "difficulty_weighted", "hardest", "filtered_random"]
+RUNS = ["random_15k", "cleaned_difficulty_topic_balanced", "cleaned_difficulty_weighted", "cleaned_hardest_only", "cleaned_random"]
 BENCHES = ["aime", "amc", "cn_math_2024", "gpqa", "kaoyan", "math", "minerva", "olympiadbench"]
 SLICE = {"aime": 30, "amc": 40, "cn_math_2024": 30, "gpqa": 40, "kaoyan": 50, "math": 100, "minerva": 40,
          "olympiadbench": 50}  # problems per slice (AIME, AMC and CN_MATH are one slice each)

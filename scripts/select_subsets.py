@@ -1,6 +1,6 @@
-r"""README steps 5 and 7: build the four 15K training subsets that start from a filtered pool.
+r"""README steps 5 and 7: build the four 15K training subsets that start from a cleaned pool.
 
-All four draw from the same filtered pool of math rows. A row stays in the pool only if:
+All four draw from the same cleaned pool of math rows. A row stays in the pool only if:
   - it's math (none of the benchmarks test code)
   - the whole example fits in 16,384 tokens, the limit we train with (longer ones get cut and lose the answer)
   - the answer written after the reasoning has exactly one \boxed{} (the eval only reads the last box)
@@ -14,21 +14,24 @@ All four draw from the same filtered pool of math rows. A row stays in the pool 
     correct one if there is one, else the shortest
 
 The four subsets:
-  filtered_random      uniform random draw from the pool
-  difficulty_weighted  weighted random draw where the weight depends on the base model's solve rate: 1.25 under
-                       0.125, 1.5 for 0.125 to 0.625, 0.75 for 0.625 to 0.875, 0.25 for 0.875 and up (with 4 tries
-                       that's 0/4, 1/4 or 2/4, 3/4, 4/4)
-  topic_balanced       same weights, and all multiple choice problems go in first, the rest is spread over 300 topic
-                       clusters (quota grows with the square root of cluster size), and a question is skipped when its
-                       embedding (from cluster_prompts.py) has cosine similarity 0.95 or more with one already picked
-  hardest              the problems with the lowest solve rate (longer solution first on ties), near duplicates skipped
+  cleaned_random
+      uniform random draw from the pool
+  cleaned_difficulty_weighted
+      weighted random draw where the weight depends on the base model's solve rate: 1.25 under 0.125, 1.5 for 0.125
+      to 0.625, 0.75 for 0.625 to 0.875, 0.25 for 0.875 and up (with 4 tries that's 0/4, 1/4 or 2/4, 3/4, 4/4)
+  cleaned_difficulty_topic_balanced
+      same weights, and all multiple choice problems go in first, the rest is spread over 300 topic clusters (quota
+      grows with the square root of cluster size), and a question is skipped when its embedding (from
+      cluster_prompts.py) has cosine similarity 0.95 or more with one already picked
+  cleaned_hardest_only
+      the problems with the lowest solve rate (longer solution first on ties), near duplicates skipped
 A problem's solve rate is the share of its 4 tries the base model got right (measure_difficulty.py). A problem without
 one (its final answer isn't a plain number or letter, or it was in shard 3, see DIFFICULTY_SHARDS) gets the mean
 solve rate of the measured problems in its length decile (length of the whole example in tokens, mostly the solution).
 
 Reads eval/train_data/merged.parquet (analysis_report.py), clusters.parquet and math_embeddings.npy
 (cluster_prompts.py), difficulty_<shard>.parquet (measure_difficulty.py), the dataset's prompts and solutions, and
-subsets/random_baseline_rows.json (README step 4, for the comparison table at the end).
+subsets/random_15k_rows.json (README step 4, for the comparison table at the end).
 Run from scripts/ with the select env (README step 1):
     $HOME/envs/select/bin/python select_subsets.py --candidates   # problem list for measure_difficulty.py
     $HOME/envs/select/bin/python select_subsets.py                # subsets/<name>_rows.json for all four
@@ -47,7 +50,7 @@ REPO = Path(__file__).resolve().parent.parent
 DATA = REPO / "eval" / "train_data"
 OUT_DIR = REPO / "subsets"
 # Subset i in this list uses seed --seed + i, so changing the order changes the rows.
-SUBSETS = ["filtered_random", "difficulty_weighted", "topic_balanced", "hardest"]
+SUBSETS = ["cleaned_random", "cleaned_difficulty_weighted", "cleaned_difficulty_topic_balanced", "cleaned_hardest_only"]
 # Our subsets were built without shard 3 of measure_difficulty.py (its job ran out of time while grading), so its
 # problems got the length based estimate. Leave 3 out to get our exact rows, or add it back to use every measurement.
 DIFFICULTY_SHARDS = [0, 1, 2, 4, 5]
@@ -94,7 +97,7 @@ def filtered_pool(df):
         ("not in the 1% most repetitive", lambda d: d.think_zlib_ratio >= loop_cut),
         ("no benchmark overlap", lambda d: d.contam_bench == ""),
     ]
-    print("filtered pool:")
+    print("cleaned pool:")
     for name, cond in steps:
         m = m[cond(m)]
         print(f"  {name:40s} {len(m):7,} rows")
@@ -160,18 +163,18 @@ def weighted_order(weights, rng):
 
 
 def select(name, pool, emb, emb_idx, n, rng):
-    if name == "filtered_random":
+    if name == "cleaned_random":
         return list(pool.row.values[rng.permutation(len(pool))[:n]])
-    if name == "difficulty_weighted":
+    if name == "cleaned_difficulty_weighted":
         return list(pool.row.values[weighted_order(pool.weight.values, rng)[:n]])
-    if name == "hardest":
+    if name == "cleaned_hardest_only":
         picker = Picker(n, emb, emb_idx, dup_sim=0.95)
         for r in pool.sort_values(["solve_est", "total_tok"], ascending=[True, False]).row.values:
             if len(picker.rows) == n:
                 break
             picker.add(r)
         return picker.rows
-    # topic_balanced: every multiple choice problem first, then quotas over the 300 topic clusters
+    # cleaned_difficulty_topic_balanced: every multiple choice problem first, then quotas over the 300 topic clusters
     picker = Picker(n, emb, emb_idx, dup_sim=0.95)
     mcq = pool[pool.mcq]
     for r in mcq.row.values[weighted_order(mcq.weight.values, rng)]:
@@ -222,7 +225,7 @@ if __name__ == "__main__":
     emb_idx = pd.Series(np.arange(len(clus)), index=clus.row.values)
 
     by_row = df.set_index("row")
-    summary = {"random_baseline": by_row.loc[json.loads((OUT_DIR / "random_baseline_rows.json").read_text())]}
+    summary = {"random_15k": by_row.loc[json.loads((OUT_DIR / "random_15k_rows.json").read_text())]}
     for i, name in enumerate(SUBSETS):
         rows = sorted(int(r) for r in select(name, pool, emb, emb_idx, args.n, np.random.default_rng(args.seed + i)))
         assert len(rows) == args.n == len(set(rows))
